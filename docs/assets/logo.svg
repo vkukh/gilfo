@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="Gilfo logo">
+  <line x1="100" y1="100" x2="100" y2="32" stroke="#5EEAD4" stroke-width="12" stroke-linecap="round"/>
+  <line x1="100" y1="100" x2="41.1" y2="134" stroke="#5EEAD4" stroke-width="12" stroke-linecap="round"/>
+  <line x1="100" y1="100" x2="158.9" y2="134" stroke="#5EEAD4" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="100" cy="32" r="18" fill="#0B0F14" stroke="#5EEAD4" stroke-width="10"/>
+  <circle cx="41.1" cy="134" r="18" fill="#0B0F14" stroke="#5EEAD4" stroke-width="10"/>
+  <circle cx="158.9" cy="134" r="18" fill="#0B0F14" stroke="#5EEAD4" stroke-width="10"/>
+  <circle cx="100" cy="100" r="24" fill="#FACC15" stroke="#0B0F14" stroke-width="7"/>
+</svg>
