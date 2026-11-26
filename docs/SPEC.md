@@ -1,308 +1,308 @@
-# Gilfo — технічна специфікація (MVP)
+# Gilfo — technical specification (MVP)
 
 Nov 15, 2026 · @Vitalii Kukhar
 
-## 1. Мета і межі MVP
+## 1. Goal and MVP scope
 
-Gilfo знімає з власника проєкту рутину підтримки й розробки: сам стежить за логами, розбирає інциденти, готує фікси у вигляді merge request і веде беклог. Людина лишає за собою три рішення: дозволити фікс, затвердити беклог, прийняти MR.
+Gilfo takes routine support and development work off the project owner: it watches the logs, investigates incidents, prepares fixes as merge requests, and keeps the backlog. The person keeps three decisions: allow a fix, approve the backlog, accept a MR.
 
-MVP охоплює один сервер і один проєкт. Керування йде через Telegram-бота текстом і голосовими повідомленнями, відповіді приходять текстом.
+The MVP covers one server and one project. Control goes through a Telegram bot by text and voice messages; replies come back as text.
 
-Мінімальний набір платформи складається з чотирьох частин: Telegram як інтерфейс комунікації та керування, адмін-панель із налаштуваннями серверів під кожен продукт, AI Server (оркестратор) і AI Server Node toolkit як його субагент на кожному сервері. Ролі SDLC (Developer, PO та інші) є окремим рівнем поверх платформи, а не її компонентами.
+The minimal platform has four parts: Telegram as the communication and control interface, an admin panel with server settings for each product, AI Server (the orchestrator), and AI Server Node toolkit as its subagent on each server. SDLC roles (Developer, PO, and others) are a separate layer on top of the platform, not its components.
 
-У MVP входить:
+The MVP includes:
 
-- аналіз логів кожні 15 хвилин за вікном 20 хвилин і звіт про інцидент із пропозицією фіксу;
-- фікс після підтвердження: гілка, коміт, MR у GitLab, посилання в Telegram;
-- щоденна аналітика логів по кожному сервісу;
-- розмова про стан проєкту в будь-який момент;
-- PO-агент, що веде беклог у Linear і доводить затверджені задачі до MR;
-- безпечні дії на сервері (рестарт, відкат) після підтвердження.
+- log analysis every 15 minutes over a 20-minute window, and an incident report with a proposed fix;
+- a fix after confirmation: branch, commit, GitLab MR, link in Telegram;
+- daily log analytics for each service;
+- a conversation about the project state at any time;
+- a PO agent that keeps the backlog in Linear and takes approved tasks through to a MR;
+- safe server actions (restart, rollback) after confirmation.
 
-Цільова картина ширша за MVP: Gilfo веде весь SDLC у стилі власника, від налаштування сервера до розробки й експлуатації, і будь-який проєкт можна поставити на паузу. Це описано в розділах 5 і 6 та розкладено по етапах у розділі 12.
+The target picture is wider than the MVP: Gilfo runs the whole SDLC in the owner's style, from server setup to development and operations, and any project can be paused. This is described in sections 5 and 6 and split into stages in section 12.
 
-Поза MVP: власний мобільний застосунок, голосові відповіді, кілька серверів, merge без участі людини.
+Out of MVP scope: an own mobile app, voice replies, several servers, merge without a person.
 
-## 2. Прийняті рішення
+## 2. Decisions made
 
-| Питання | Рішення | Що це означає для реалізації |
+| Question | Decision | What it means for the implementation |
 | --- | --- | --- |
-| Інтерфейс | Telegram-бот | Текст, голосові повідомлення, inline-кнопки рішень. Налаштування серверів і продуктів задаються в адмін-панелі. Мобільний застосунок пізніше підключається до того самого API |
-| Де працюють агенти | Будь-який рантайм через AgentRuntime (спершу Cursor SDK, потім OpenCode), локально на сервері проєкту | Агенти працюють у відокремленій робочій копії репозиторію, не в каталозі деплою. Потрібні ізоляція та ліміти ресурсів (розділ 9) |
-| Інфраструктура | Docker Compose, systemd, PM2 | Три адаптери логів: Docker, journald, файли PM2 |
-| Дії на проді | Лише з runbook і після підтвердження | Агент пропонує дію, виконує її детермінований код AI Admin |
-| Git | GitLab | Гілка й MR через GitLab API, статуси через вебхуки |
-| Беклог | Linear | PO-агент створює й рухає задачі, інциденти теж отримують задачу |
-| Роль PO-агента | Пропонує беклог, власник затверджує | Розробка стартує лише для затверджених задач |
-| Масштаб старту | 1 сервер, 1 проєкт | Протокол і модель даних одразу багатосерверні |
-| Охоплення | Увесь SDLC у стилі власника | Потрібен playbook зі стеком, конвенціями й шаблонами (розділ 5) |
-| Пауза | Проєкт можна зупинити й відновити | Стан проєкту в Core, знімок контексту при зупинці (розділ 6) |
+| Interface | Telegram bot | Text, voice messages, inline decision buttons. Server and product settings are set in the admin panel. A mobile app later connects to the same API |
+| Where agents run | Any runtime through AgentRuntime (Cursor SDK first, then OpenCode), locally on the project server | Agents work in a separate working copy of the repository, not in the deploy directory. Isolation and resource limits are required (section 9) |
+| Infrastructure | Docker Compose, systemd, PM2 | Three log adapters: Docker, journald, PM2 files |
+| Production actions | Only from the runbook and after confirmation | The agent proposes an action; deterministic AI Admin code executes it |
+| Git | GitLab | Branch and MR through the GitLab API, statuses through webhooks |
+| Backlog | Linear | The PO agent creates and moves tasks; incidents get a task too |
+| PO agent role | Proposes the backlog, the owner approves | Development starts only for approved tasks |
+| Starting scale | 1 server, 1 project | The protocol and data model are multi-server from the start |
+| Coverage | The whole SDLC in the owner's style | A playbook with the stack, conventions, and templates is required (section 5) |
+| Pause | A project can be stopped and resumed | Project state in Core, a context snapshot on stop (section 6) |
 
-## 3. Архітектура
+## 3. Architecture
 
-Платформа складається з чотирьох частин: Telegram-бота, адмін-панелі, AI Server (оркестратор) і AI Server Node toolkit на кожному сервері. Це мінімальний набір; ролі SDLC з розділу 4 працюють поверх нього і до складу платформи не входять.
+The platform has four parts: the Telegram bot, the admin panel, AI Server (the orchestrator), and AI Server Node toolkit on each server. This is the minimal set; the SDLC roles from section 4 work on top of it and are not part of the platform.
 
-&#91;embedded content: архітектура Gilfo · Core, AI Admin, агенти, зовнішні системи\]
+&#91;embedded content: Gilfo architecture · Core, AI Admin, agents, external systems\]
 
-Node сам відкриває з'єднання до AI Server, тож на сервері продукту не потрібні вхідні порти. Моделі виконуються в хмарі постачальника навіть у локальному режимі, тому серверу потрібен вихід в інтернет.
+The Node opens the connection to AI Server itself, so the product server needs no inbound ports. Models run in the provider's cloud even in local mode, so the server needs outbound internet access.
 
-Далі в документі «Core» означає AI Server, а «AI Admin» означає AI Server Node.
+Further in this document, "Core" means AI Server and "AI Admin" means AI Server Node.
 
 ### 3.1. Telegram
 
-Єдиний інтерфейс комунікації та керування: питання текстом і голосом, сповіщення, звіти, підтвердження дій кнопками. Деталі в розділі 8.
+The only communication and control interface: questions by text and voice, notifications, reports, action confirmation with buttons. Details are in section 8.
 
-### 3.2. Адмін-панель
+### 3.2. Admin panel
 
-Веб-інтерфейс для налаштувань, які незручно й небезпечно задавати в чаті. Панель лише зберігає конфігурацію: дій на серверах із неї немає, вони йдуть через Telegram із підтвердженням.
+A web interface for settings that are inconvenient and unsafe to set in a chat. The panel only stores configuration: it has no server actions; those go through Telegram with confirmation.
 
-Для кожного продукту задаються:
+For each product it sets:
 
-- сервери: IP, порт SSH, середовище (prod, staging);
-- користувачі: облікові записи на сервері (під ким підключатися й запускати сервіси) та хто має доступ до продукту в Telegram;
-- змінні: змінні середовища продукту й параметри Gilfo (розклад, тихі години, ліміти витрат, модель для кожної ролі);
-- ключі: SSH-ключі, токени GitLab і Linear, ключ постачальника моделей;
-- сервіси: що моніторити, джерела логів, health-check.
+- servers: IP, SSH port, environment (prod, staging);
+- users: accounts on the server (who to connect and run services as) and who has access to the product in Telegram;
+- variables: the product's environment variables and Gilfo parameters (schedule, quiet hours, spending limits, model for each role);
+- keys: SSH keys, GitLab and Linear tokens, the model provider key;
+- services: what to monitor, log sources, health checks.
 
-Панель зберігає ключі до всіх серверів, тому вона є найціннішою ціллю в системі. Обов'язкові вимоги:
+The panel stores keys to all servers, so it is the most valuable target in the system. Mandatory requirements:
 
-- секрети зашифровані в базі, ключ шифрування зберігається поза базою;
-- після збереження секрет показується лише замаскованим, прочитати його назад не можна;
-- вхід із двофакторною автентифікацією; панель недоступна з відкритого інтернету (VPN або список дозволених IP);
-- кожна зміна налаштувань потрапляє в журнал аудиту;
-- Node отримує лише секрети свого продукту, агенти їх не бачать.
+- secrets are encrypted in the database; the encryption key is stored outside the database;
+- after saving, a secret is shown only masked and cannot be read back;
+- login with two-factor authentication; the panel is not reachable from the open internet (VPN or an IP allowlist);
+- every settings change goes into the audit log;
+- a Node receives only its own product's secrets; agents do not see them.
 
-### 3.3. AI Server (оркестратор)
+### 3.3. AI Server (orchestrator)
 
-Центральний агент, з яким спілкується власник. Він читає конфігурацію з адмін-панелі, тримає стан і вирішує, що й на якому сервері запускати. Node toolkit кожного сервера підключений до нього як субагент.
+The central agent the owner talks to. It reads configuration from the admin panel, holds state, and decides what to run and on which server. Each server's Node toolkit is connected to it as a subagent.
 
-AI Server розміщується окремо від серверів продуктів (невеликий VPS). Інакше падіння сервера заглушить і самі сповіщення. Модулі:
+AI Server is hosted separately from the product servers (a small VPS). Otherwise a server failure would also silence the notifications. Modules:
 
-- Dialog Router: визначає намір і продукт, відповідає сам або викликає інструменти потрібного Node.
-- Scheduler: 15-хвилинні перевірки, щоденний звіт, цикл задач із беклогу.
-- Incident Manager: життєвий цикл інциденту, дедуплікація, зв'язок із MR і задачею Linear.
-- Approval Service: кожна дія зі зміною стану чекає на рішення власника; запит має термін дії.
-- Інтеграції: Telegram, GitLab і Linear (API, вебхуки).
-- Сховище, журнал аудиту, облік витрат.
+- Dialog Router: detects intent and product, answers itself or calls the tools of the right Node.
+- Scheduler: 15-minute checks, daily report, backlog task cycle.
+- Incident Manager: incident lifecycle, deduplication, link to the MR and the Linear task.
+- Approval Service: every state-changing action waits for the owner's decision; a request has an expiry.
+- Integrations: Telegram, GitLab, and Linear (API, webhooks).
+- Storage, audit log, cost accounting.
 
 ### 3.4. AI Server Node toolkit
 
-Легкий демон на сервері продукту (systemd-сервіс під окремим користувачем). Node не приймає рішень: він надає оркестратору набір інструментів і виконує їхні виклики.
+A lightweight daemon on the product server (a systemd service under a separate user). The Node makes no decisions: it gives the orchestrator a set of tools and executes their calls.
 
-| Інструмент | Що робить | Підтвердження власника |
+| Tool | What it does | Owner confirmation |
 | --- | --- | --- |
-| `logs.query` | Повертає записи логів за вікно після префільтра й маскування секретів | Не потрібне |
-| `services.status` | Стан сервісів, диск, пам'ять, health-check | Не потрібне |
-| `repo.read` | Читання коду й історії git у робочій копії | Не потрібне |
-| `agent.run` | Запуск агента-кодера через вибраний рантайм в окремому worktree з роллю з playbook | Потрібне для змін коду |
-| `mr.create` | Push гілки `gilfo/*` і створення MR у GitLab | Входить у підтверджений фікс або задачу |
-| `runbook.execute` | Дія з runbook: рестарт, відкат, очищення диска, Ansible-роль | Потрібне завжди |
+| `logs.query` | Returns log entries for a window after the pre-filter and secret masking | Not required |
+| `services.status` | Service state, disk, memory, health checks | Not required |
+| `repo.read` | Reads code and git history in the working copy | Not required |
+| `agent.run` | Runs a coding agent through the selected runtime in a separate worktree with a role from the playbook | Required for code changes |
+| `mr.create` | Pushes a `gilfo/*` branch and creates a GitLab MR | Part of a confirmed fix or task |
+| `runbook.execute` | A runbook action: restart, rollback, disk cleanup, Ansible role | Always required |
 
-Локально Node тримає лише префільтр логів, який працює без моделі, і буфер подій на випадок втрати зв'язку. Новий інструмент додається в toolkit без змін в оркестраторі.
+Locally the Node keeps only the log pre-filter, which works without a model, and an event buffer in case the connection drops. A new tool is added to the toolkit with no changes to the orchestrator.
 
-Встановлення: оркестратор підключається до сервера по SSH з IP, користувачем і ключем із адмін-панелі й ставить Node. Після цього вся робота йде через з'єднання, яке відкриває сам Node, і SSH-доступ оркестратора можна відкликати.
+Installation: the orchestrator connects to the server over SSH with the IP, user, and key from the admin panel and installs the Node. After that, all work goes through the connection the Node opens itself, and the orchestrator's SSH access can be revoked.
 
-Протокол AI Server ↔ Node: WebSocket поверх TLS, токен на кожен Node, повідомлення з ідентифікаторами для ідемпотентності. Якщо зв'язок зник, Node буферизує події локально, а AI Server через 3 пропущені heartbeat надсилає сповіщення «сервер недоступний».
+AI Server ↔ Node protocol: WebSocket over TLS, a token per Node, messages with identifiers for idempotency. If the connection is lost, the Node buffers events locally, and after 3 missed heartbeats AI Server sends a "server unreachable" notification.
 
-## 4. Ролі SDLC (рівень над платформою)
+## 4. SDLC roles (layer above the platform)
 
-Ролі не є компонентами платформи. Роль є конфігурацією в playbook: системний промпт, набір інструментів Node і права. Оркестратор обирає роль під задачу й передає її в `agent.run`, тож додати чи змінити роль можна без змін у коді платформи.
+Roles are not platform components. A role is configuration in the playbook: a system prompt, a set of Node tools, and permissions. The orchestrator picks a role for the task and passes it to `agent.run`, so a role can be added or changed with no changes to the platform code.
 
-Права мінімальні для ролі: хто читає логи, той не може писати код чи виконувати команди. Набір ролей нижче є стартовим.
+Permissions are minimal for the role: whoever reads logs cannot write code or run commands. The set of roles below is a starting point.
 
-| Агент | Що робить | Права | Результат |
+| Agent | What it does | Permissions | Result |
 | --- | --- | --- | --- |
-| Log Analyst | Класифікує відібрані записи логів: інцидент чи шум, серйозність, зачеплений сервіс | Лише читання: логи, агрегати, код | Картка інциденту, текст щоденного звіту |
-| Developer | Шукає причину в коді, пропонує фікс, після «добро» реалізує фікс або задачу з беклогу | Запис лише у worktree задачі; тести й лінтер у sandbox; push лише в гілки `gilfo/*` | Пропозиція фіксу, гілка, MR |
-| PO | Перетворює цілі власника на задачі з критеріями приймання, пріоритизує, стежить за виконанням | Читання коду; запис у Linear | Беклог на затвердження, тижневе зведення |
-| Architect | Проєктує рішення для нових проєктів і великих задач, перевіряє відповідність playbook | Читання коду; запис лише в `docs/adr` | ADR, технічний план задачі |
-| Reviewer | Перевіряє MR перед тим, як показати його власнику: діф, тести, конвенції, безпека | Лише читання | Коментарі в MR, вердикт |
-| DevOps | Готує сервер і CI/CD за шаблонами, пропонує дії з runbook під час інцидентів | Пише інфраструктурний код у репозиторій; сам нічого не виконує на сервері | MR з інфракодом, запит на дію |
+| Log Analyst | Classifies selected log entries: incident or noise, severity, affected service | Read only: logs, aggregates, code | Incident card, daily report text |
+| Developer | Finds the cause in the code, proposes a fix, and after a go-ahead implements the fix or a backlog task | Writes only to the task worktree; tests and linter in the sandbox; push only to `gilfo/*` branches | Fix proposal, branch, MR |
+| PO | Turns the owner's goals into tasks with acceptance criteria, prioritizes, tracks progress | Reads code; writes to Linear | Backlog for approval, weekly summary |
+| Architect | Designs solutions for new projects and large tasks, checks compliance with the playbook | Reads code; writes only to `docs/adr` | ADR, technical plan for the task |
+| Reviewer | Checks a MR before showing it to the owner: diff, tests, conventions, security | Read only | MR comments, verdict |
+| DevOps | Prepares the server and CI/CD from templates, proposes runbook actions during incidents | Writes infrastructure code to the repository; executes nothing on the server itself | MR with infrastructure code, action request |
 
-Два правила спільні для всіх. Перше: зміни на сервері робить не модель, а Action Executor за шаблоном із runbook. Друге: текст логів і зовнішніх джерел для агента є даними, а не інструкціями.
+Two rules apply to everyone. First: server changes are made not by the model but by the Action Executor from a runbook template. Second: text from logs and external sources is data for the agent, not instructions.
 
-## 5. Повний SDLC у стилі власника
+## 5. Full SDLC in the owner's style
 
-«Стиль» задає playbook: окремий репозиторій `gilfo-playbook`, який підключається до кожного запуску агента. Без нього агенти писатимуть «середній» код, а не код власника.
+The "style" is set by the playbook: a separate `gilfo-playbook` repository that is attached to every agent run. Without it, agents would write "average" code, not the owner's code.
 
-Playbook містить:
+The playbook contains:
 
-- стек і шаблони проєктів (каркас репозиторію, структура каталогів, базові залежності);
-- конвенції коду, іменування, правила комітів і MR у вигляді `.cursor/rules`;
-- Definition of Done: що має бути в MR, які тести обов'язкові;
-- шаблони інфраструктури: Ansible-ролі для сервера, Docker Compose, конфіг reverse proxy, GitLab CI;
-- runbook дозволених дій на сервері;
-- шаблони задач, ADR і звітів.
+- the stack and project templates (repository skeleton, directory structure, base dependencies);
+- code conventions, naming, commit and MR rules as `.cursor/rules`;
+- Definition of Done: what a MR must contain, which tests are mandatory;
+- infrastructure templates: Ansible roles for the server, Docker Compose, reverse proxy config, GitLab CI;
+- the runbook of allowed server actions;
+- templates for tasks, ADRs, and reports.
 
-Першу версію playbook Gilfo збирає сам: Architect аналізує наявні репозиторії власника, виписує знайдені конвенції і віддає їх на правку й затвердження. Далі кожне зауваження власника в MR, яке повторюється, стає пропозицією нового правила.
+Gilfo builds the first version of the playbook itself: the Architect analyzes the owner's existing repositories, writes down the conventions it finds, and hands them over for editing and approval. After that, every owner comment in a MR that repeats becomes a proposal for a new rule.
 
-| Етап | Хто веде | Що відбувається | Рішення власника |
+| Stage | Who leads | What happens | Owner decision |
 | --- | --- | --- | --- |
-| Ідея | PO | Голосовий або текстовий опис перетворюється на коротку продуктову спеку і беклог | Затвердити спеку й беклог |
-| Архітектура | Architect | Вибір шаблону з playbook, ADR, схема сервісів і даних | Затвердити ADR |
-| Налаштування репозиторію | Developer, DevOps | Репозиторій у GitLab, каркас коду, CI, захист гілок, проєкт у Linear | Прийняти перший MR |
-| Налаштування сервера | DevOps, AI Admin | Одна команда встановлює AI Admin; далі він застосовує Ansible-ролі: користувачі, firewall, Docker, reverse proxy, TLS, бекапи | Підтвердити план змін перед застосуванням |
-| Розробка | PO, Developer | Затверджені задачі йдуть у роботу по одній, кожна закінчується MR | Немає |
-| Рев'ю | Reviewer | Автоматична перевірка MR, виправлення зауважень, зелений CI | Прийняти або повернути MR |
-| Реліз | DevOps, AI Admin | Деплой через GitLab CI після merge; перевірка health-check'ів; відкат за runbook | Підтвердити деплой на прод |
-| Експлуатація | Log Analyst, Developer | Моніторинг логів, інциденти, фікси, щоденний звіт | Дозволити фікс або дію |
-| Підтримка | Developer | Оновлення залежностей, вразливості, технічний борг як задачі в беклозі | Затвердити задачі |
+| Idea | PO | A voice or text description becomes a short product spec and backlog | Approve the spec and backlog |
+| Architecture | Architect | Picking a template from the playbook, ADR, service and data diagram | Approve the ADR |
+| Repository setup | Developer, DevOps | GitLab repository, code skeleton, CI, branch protection, Linear project | Accept the first MR |
+| Server setup | DevOps, AI Admin | One command installs AI Admin; then it applies Ansible roles: users, firewall, Docker, reverse proxy, TLS, backups | Confirm the change plan before applying |
+| Development | PO, Developer | Approved tasks go into work one at a time, each ending with a MR | None |
+| Review | Reviewer | Automatic MR check, fixing comments, green CI | Accept or return the MR |
+| Release | DevOps, AI Admin | Deploy through GitLab CI after merge; health-check verification; rollback by runbook | Confirm the production deploy |
+| Operations | Log Analyst, Developer | Log monitoring, incidents, fixes, daily report | Allow a fix or an action |
+| Maintenance | Developer | Dependency updates, vulnerabilities, technical debt as backlog tasks | Approve tasks |
 
-Налаштування сервера декларативне: агент обирає ролі й змінні, Ansible спершу показує план змін (`--check --diff`), власник підтверджує, і лише тоді ролі застосовуються. Довільних root-команд від моделі немає.
+Server setup is declarative: the agent picks roles and variables, Ansible first shows the change plan (`--check --diff`), the owner confirms, and only then are the roles applied. There are no arbitrary root commands from the model.
 
-## 6. Пауза проєкту
+## 6. Project pause
 
-Проєкт має стан, який власник змінює командою в Telegram. Пауза зупиняє витрати й роботу агентів, але зберігає все потрібне для продовження.
+A project has a state that the owner changes with a command in Telegram. A pause stops spending and agent work but keeps everything needed to continue.
 
-| Стан | Розробка (PO, Developer) | Моніторинг і звіти | Коли застосовувати |
+| State | Development (PO, Developer) | Monitoring and reports | When to use |
 | --- | --- | --- | --- |
-| `active` | Працює | Працює | Звичайний режим |
-| `dev_paused` | Зупинена | Працює | Продукт живе, нові фічі не потрібні |
-| `paused` | Зупинена | Лише heartbeat і health-check | Проєкт заморожено |
-| `archived` | Зупинена | Зупинено, AI Admin відключено | Проєкт закрито |
+| `active` | Running | Running | Normal mode |
+| `dev_paused` | Stopped | Running | The product is live, new features are not needed |
+| `paused` | Stopped | Only heartbeat and health checks | The project is frozen |
+| `archived` | Stopped | Stopped, AI Admin disconnected | The project is closed |
 
-Під час паузи Gilfo:
+During a pause, Gilfo:
 
-1. Перестає брати нові задачі й вимикає розклад проєкту.
-2. Дає активному агенту завершити поточний крок або скасовує запуск, якщо власник обрав «зупинити негайно».
-3. Пушить незавершену роботу в гілку з позначкою WIP і переводить MR у draft.
-4. Записує знімок: що зроблено, що в роботі, відкриті інциденти й MR, наступний крок. Знімок зберігається в Core і в репозиторії (`docs/gilfo/state.md`).
-5. Позначає задачі в Linear як призупинені.
+1. Stops taking new tasks and turns off the project schedule.
+2. Lets the active agent finish its current step, or cancels the run if the owner chose "stop now".
+3. Pushes unfinished work to a branch marked WIP and turns the MR into a draft.
+4. Writes a snapshot: what is done, what is in progress, open incidents and MRs, the next step. The snapshot is stored in Core and in the repository (`docs/gilfo/state.md`).
+5. Marks the tasks in Linear as paused.
 
-Під час відновлення агент читає знімок, оновлює гілки від основної, перевіряє, що змінилось за час паузи, і надсилає короткий план продовження на підтвердження. Окремо існує глобальний аварійний стоп `/stop`: він негайно скасовує всі запуски агентів на всіх проєктах.
+On resume, the agent reads the snapshot, updates branches from the default branch, checks what changed during the pause, and sends a short plan for continuing for confirmation. Separately, there is a global emergency stop `/stop`: it immediately cancels all agent runs on all projects.
 
-## 7. Сценарії
+## 7. Scenarios
 
-### 7.1. Моніторинг логів і інцидент
+### 7.1. Log monitoring and an incident
 
-Кожні 15 хвилин AI Admin аналізує останні 20 хвилин логів. П'ятихвилинне перекриття ловить події на межі вікон, а відбитки помилок не дають надіслати той самий інцидент двічі.
+Every 15 minutes AI Admin analyzes the last 20 minutes of logs. The five-minute overlap catches events on window boundaries, and error fingerprints prevent sending the same incident twice.
 
-1. Log Collector збирає записи за вікно з усіх сервісів.
-2. Pre-filter без моделі відбирає підозріле: рівень error і вище, stack trace, коди 5xx, рестарти контейнерів, OOM, стрибок частоти помилок проти базового рівня, раптова тиша сервісу.
-3. Кожна помилка отримує відбиток (нормалізоване повідомлення плюс верхні кадри стека). Відомі й приглушені відбитки далі не йдуть.
-4. Якщо нового немає, цикл закінчується без виклику моделі. Це головний важіль вартості: 96 циклів на добу на кожен сервер.
-5. Інакше Log Analyst отримує відібрані записи з замаскованими секретами й вирішує: інцидент чи шум, серйозність, сервіс, гіпотеза.
-6. Для інциденту Developer у режимі «лише читання» аналізує код і недавні коміти: причина, план фіксу, файли, ризик, впевненість.
-7. Core надсилає в Telegram звіт про інцидент із кнопками: «Фіксити», «Деталі», «Ігнорувати», «Приглушити подібні», а за потреби дію з runbook («Рестарт сервісу»).
+1. Log Collector gathers entries for the window from all services.
+2. A pre-filter without a model selects anything suspicious: error level and above, stack traces, 5xx codes, container restarts, OOM, a jump in error rate against the baseline, sudden silence from a service.
+3. Each error gets a fingerprint (normalized message plus the top stack frames). Known and muted fingerprints go no further.
+4. If there is nothing new, the cycle ends without calling a model. This is the main cost lever: 96 cycles a day per server.
+5. Otherwise the Log Analyst receives the selected entries with secrets masked and decides: incident or noise, severity, service, hypothesis.
+6. For an incident, the Developer in read-only mode analyzes the code and recent commits: cause, fix plan, files, risk, confidence.
+7. Core sends an incident report to Telegram with buttons: "Fix", "Details", "Ignore", "Mute similar", and a runbook action when needed ("Restart service").
 
-Серйозність визначає поведінку сповіщень: критичні приходять одразу в будь-який час, середні чекають кінця тихих годин, низькі потрапляють лише в щоденний звіт.
+Severity drives notification behavior: critical ones arrive immediately at any time, medium ones wait for the end of quiet hours, low ones go only into the daily report.
 
-### 7.2. Фікс і merge request
+### 7.2. Fix and merge request
 
-1. Власник натискає «Фіксити». Core фіксує підтвердження в аудиті.
-2. Workspace Manager створює worktree і гілку `gilfo/fix/INC-<номер>-<короткий-опис>` від актуальної основної гілки.
-3. Developer реалізує фікс, додає тест, що відтворює помилку, запускає тести й лінтер.
-4. Reviewer перевіряє діф; зауваження повертаються до Developer, не більше 2 кіл.
-5. AI Admin пушить гілку й створює MR через GitLab API: опис інциденту, причина, що змінено, як перевірено, посилання на задачу Linear.
-6. Власник отримує посилання на MR і статус CI. Подальше рішення за ним.
-7. Коментарі власника в MR приходять вебхуком; Developer доопрацьовує в тій самій гілці.
-8. Після merge і деплою Gilfo стежить за відбитком 24 години й закриває інцидент або повідомляє, що помилка повернулась.
+1. The owner presses "Fix". Core records the confirmation in the audit log.
+2. Workspace Manager creates a worktree and a `gilfo/fix/INC-<number>-<short-description>` branch from the current default branch.
+3. The Developer implements the fix, adds a test that reproduces the error, runs the tests and the linter.
+4. The Reviewer checks the diff; comments go back to the Developer, no more than 2 rounds.
+5. AI Admin pushes the branch and creates a MR through the GitLab API: incident description, cause, what changed, how it was verified, link to the Linear task.
+6. The owner gets the MR link and the CI status. The next decision is theirs.
+7. The owner's MR comments arrive by webhook; the Developer follows up in the same branch.
+8. After merge and deploy, Gilfo watches the fingerprint for 24 hours and either closes the incident or reports that the error came back.
 
-Якщо тести не проходять або агент не вклався в ліміт часу, MR не створюється: власник отримує чесний звіт, що зроблено і де застрягло.
+If the tests fail or the agent runs out of time, no MR is created: the owner gets an honest report of what was done and where it got stuck.
 
-### 7.3. Щоденний звіт
+### 7.3. Daily report
 
-Звіт приходить раз на добу в заданий час (типово 09:00 за кіпрським часом). Цифри рахує код із агрегатів 15-хвилинних циклів, модель пише лише короткий висновок.
+The report arrives once a day at a set time (09:00 Cyprus time by default). The numbers are computed by code from the aggregates of the 15-minute cycles; the model writes only a short conclusion.
 
-По кожному сервісу:
+For each service:
 
-- кількість помилок і попереджень проти попередньої доби та середнього за 7 днів;
-- нові відбитки помилок і 5 найчастіших;
-- рестарти, простої, піки пам'яті й диска;
-- інциденти за добу та їхній статус.
+- the number of errors and warnings against the previous day and the 7-day average;
+- new error fingerprints and the 5 most frequent;
+- restarts, downtime, memory and disk peaks;
+- incidents for the day and their status.
 
-По проєкту загалом: відкриті MR, що чекають на рев'ю, поступ беклогу, витрати на агентів за добу.
+For the project as a whole: open MRs waiting for review, backlog progress, agent spending for the day.
 
-### 7.4. Розмова про стан проєкту
+### 7.4. Conversation about the project state
 
-Власник пише або наговорює питання довільною мовою. Dialog Router відповідає з даних Core (інциденти, MR, беклог, витрати), а питання про код і живий стан сервера передає агенту на AI Admin. Контекст розмови зберігається по проєкту, тож уточнення не вимагають повторів.
+The owner writes or speaks a question in free form. Dialog Router answers from Core data (incidents, MRs, backlog, spending) and passes questions about the code and the live server state to the agent on AI Admin. Conversation context is kept per project, so follow-up questions need no repetition.
 
-Приклади: «що з проєктом?», «чому вночі падав api?», «що залишилось по беклогу?», «покажи, як зроблена авторизація».
+Examples: "how is the project?", "why did the api fail last night?", "what is left in the backlog?", "show me how authorization is done".
 
-### 7.5. Беклог і розробка фіч
+### 7.5. Backlog and feature development
 
-1. Власник описує ціль. PO ставить уточнювальні питання, якщо без них не обійтись.
-2. PO створює в Linear задачі зі статусом Proposed: опис, критерії приймання, оцінка розміру, залежності.
-3. Власник затверджує список у Telegram або переводить задачі в Approved прямо в Linear.
-4. PO бере затверджені задачі за пріоритетом; одночасно в роботі не більше 1 задачі на проєкт у MVP.
-5. Для великої задачі Architect пише технічний план. Developer реалізує в гілці `gilfo/feat/<id задачі>`, далі як у 7.2.
-6. Статус у Linear змінюється автоматично: In Progress, In Review після створення MR, Done після merge.
-7. Раз на тиждень PO надсилає зведення: зроблено, в роботі, заблоковано, пропозиції на наступний тиждень.
+1. The owner describes a goal. The PO asks clarifying questions if it cannot do without them.
+2. The PO creates tasks in Linear with status Proposed: description, acceptance criteria, size estimate, dependencies.
+3. The owner approves the list in Telegram or moves tasks to Approved directly in Linear.
+4. The PO takes approved tasks by priority; in the MVP, no more than 1 task per project is in progress at a time.
+5. For a large task, the Architect writes a technical plan. The Developer implements it in a `gilfo/feat/<task id>` branch, then as in 7.2.
+6. The status in Linear changes automatically: In Progress, In Review after the MR is created, Done after merge.
+7. Once a week the PO sends a summary: done, in progress, blocked, proposals for next week.
 
-## 8. Telegram-інтерфейс
+## 8. Telegram interface
 
-Бот приймає повідомлення лише від власника: список дозволених Telegram user id задається в конфігурації Core, усім іншим бот не відповідає.
+The bot accepts messages only from the owner: the list of allowed Telegram user ids is set in the Core configuration; the bot does not answer anyone else.
 
-- **Текст.** Довільна мова або команди.
-- **Голос.** Голосове повідомлення розпізнається в текст (українська, з технічними термінами англійською). Бот показує розпізнаний текст перед відповіддю.
-- **Кнопки.** Кожне рішення приймається кнопкою, а не текстом. Голосова команда ніколи не підтверджує дію на сервері сама: бот перепитує кнопкою.
-- **Відповіді.** Текстом. Довгі звіти скорочуються до зведення з кнопкою «Деталі».
+- **Text.** Free form or commands.
+- **Voice.** A voice message is transcribed to text (Ukrainian, with technical terms in English). The bot shows the transcribed text before answering.
+- **Buttons.** Every decision is made with a button, not with text. A voice command never confirms a server action by itself: the bot asks again with a button.
+- **Replies.** As text. Long reports are shortened to a summary with a "Details" button.
 
-| Команда | Дія |
+| Command | Action |
 | --- | --- |
-| `/status` | Стан проєкту: сервіси, відкриті інциденти, MR, задачі в роботі |
-| `/incidents` | Список інцидентів і їхніх статусів |
-| `/report` | Щоденний звіт поза розкладом |
-| `/backlog` | Беклог: на затвердженні, в роботі, зроблено |
-| `/pause`, `/resume` | Пауза й відновлення проєкту з вибором рівня паузи |
-| `/stop` | Аварійна зупинка всіх агентів |
-| `/budget` | Витрати за день і місяць, ліміти |
-| `/project` | Вибір активного проєкту для розмови |
-| `/new` | Старт нового проєкту за SDLC з розділу 5 |
+| `/status` | Project state: services, open incidents, MRs, tasks in progress |
+| `/incidents` | List of incidents and their statuses |
+| `/report` | Daily report outside the schedule |
+| `/backlog` | Backlog: awaiting approval, in progress, done |
+| `/pause`, `/resume` | Pause and resume the project, choosing the pause level |
+| `/stop` | Emergency stop of all agents |
+| `/budget` | Spending for the day and month, limits |
+| `/project` | Choose the active project for the conversation |
+| `/new` | Start a new project through the SDLC from section 5 |
 
-Звіт про інцидент має сталу структуру: серйозність і сервіс, що сталось одним реченням, коли й скільки разів, ймовірна причина з посиланням на файл і рядок, запропонований фікс, ризик фіксу, кнопки рішень. Запит на підтвердження діє 30 хвилин для дій на сервері і без обмеження для фіксів у коді.
+An incident report has a fixed structure: severity and service, what happened in one sentence, when and how many times, the likely cause with a link to the file and line, the proposed fix, the fix risk, decision buttons. A confirmation request is valid for 30 minutes for server actions and has no limit for code fixes.
 
-Мобільний застосунок пізніше використає той самий API Core, що й Telegram Gateway, тому Gateway не містить бізнес-логіки.
+A mobile app will later use the same Core API as Telegram Gateway, so the Gateway holds no business logic.
 
-## 9. Безпека і права
+## 9. Security and permissions
 
-Агенти працюють на тому самому сервері, що й прод, тому ізоляція є обов'язковою частиною MVP, а не покращенням на потім. За типовими налаштуваннями локальний агент Cursor SDK виконує інструменти без підтвердження, а sandbox вимкнено.
+Agents run on the same server as production, so isolation is a mandatory part of the MVP, not an improvement for later. By default, the local Cursor SDK agent runs tools without confirmation, and the sandbox is off.
 
-**Ізоляція агентів**
+**Agent isolation**
 
-- Окремий користувач `gilfo` без sudo і без доступу до каталогу деплою та продових `.env`.
-- Робочі копії в `/opt/gilfo/workspaces`; агент пише лише туди.
-- `sandboxOptions.enabled: true`: команди обмежені робочим каталогом, мережа лише за списком дозволених адрес (GitLab, реєстри пакетів).
-- Списки дозволених і заборонених інструментів на кожну роль; хуки `.cursor/hooks.json` блокують небезпечні shell-команди.
-- Ліміти CPU і пам'яті через systemd slice, щоб збірка й тести не забрали ресурси в продових сервісів.
-- Доступ до Docker лише через проксі сокета з дозволом на читання логів і списку контейнерів. Прямий доступ до сокета рівнозначний root.
+- A separate `gilfo` user without sudo and without access to the deploy directory and production `.env` files.
+- Working copies in `/opt/gilfo/workspaces`; the agent writes only there.
+- `sandboxOptions.enabled: true`: commands are restricted to the working directory, network only to an allowlist of addresses (GitLab, package registries).
+- Allowed and denied tool lists for each role; `.cursor/hooks.json` hooks block dangerous shell commands.
+- CPU and memory limits through a systemd slice, so builds and tests do not take resources from production services.
+- Docker access only through a socket proxy that allows reading logs and the container list. Direct socket access is equivalent to root.
 
-**Дії на сервері**
+**Server actions**
 
-Runbook є файлом у playbook. Кожна дія має шаблон команди, передумову, перевірку після виконання й тайм-аут. Параметри від моделі валідуються за списком дозволених значень.
+The runbook is a file in the playbook. Each action has a command template, a precondition, a post-check, and a timeout. Parameters from the model are validated against an allowlist of values.
 
-| Дія | Коли пропонується | Перевірка після |
+| Action | When it is proposed | Post-check |
 | --- | --- | --- |
-| Рестарт сервісу | Сервіс не відповідає або зациклився в рестартах | Health-check протягом 2 хвилин |
-| Відкат на попередній реліз | Помилки почались після деплою | Health-check, зникнення відбитка помилки |
-| Очищення диска | Вільного місця менше 10% | Вільне місце після очищення |
-| Застосування Ansible-ролі | Налаштування сервера, зміна конфігурації | Повторний запуск у режимі перевірки не показує змін |
+| Service restart | The service does not respond or is stuck in a restart loop | Health check within 2 minutes |
+| Rollback to the previous release | Errors started after a deploy | Health check, the error fingerprint disappears |
+| Disk cleanup | Less than 10% free space | Free space after cleanup |
+| Applying an Ansible role | Server setup, configuration change | A repeat run in check mode shows no changes |
 
-Дії виконує окремий процес Action Executor з вузькими sudo-правилами під конкретні команди. Агент до нього доступу не має.
+Actions are executed by a separate Action Executor process with narrow sudo rules for specific commands. The agent has no access to it.
 
-**GitLab і секрети**
+**GitLab and secrets**
 
-- Project access token із правами на push у гілки `gilfo/*` і створення MR. Основна гілка захищена, права merge в токена немає.
-- Ключі Cursor, GitLab, Linear і Telegram зберігаються поза робочими копіями й передаються процесу, а не агенту.
-- Pre-filter маскує токени, паролі, email і телефони в логах до того, як текст потрапить у модель.
+- A project access token with rights to push to `gilfo/*` branches and create MRs. The default branch is protected; the token has no merge rights.
+- Cursor, GitLab, Linear, and Telegram keys are stored outside the working copies and passed to the process, not to the agent.
+- The pre-filter masks tokens, passwords, emails, and phone numbers in logs before the text reaches the model.
 
-**Контроль**
+**Control**
 
-- Журнал аудиту: кожен запуск агента, команда, підтвердження, дія на сервері, з часом і результатом.
-- Ліміти витрат на день і місяць по проєкту; після вичерпання працює лише моніторинг без моделі.
-- Ліміт часу на запуск агента й кількості MR на добу.
-- Аварійний стоп `/stop`.
+- Audit log: every agent run, command, confirmation, server action, with time and result.
+- Daily and monthly spending limits per project; once exhausted, only monitoring without a model keeps working.
+- Limits on agent run time and on the number of MRs per day.
+- Emergency stop `/stop`.
 
-## 10. Рантайм агентів: провайдер-агностик
+## 10. Agent runtime: provider-agnostic
 
-Gilfo не прив'язаний до одного постачальника агентів. Увесь доступ до них іде через інтерфейс `AgentRuntime`, а конкретний рантайм — це адаптер, який обирається в адмін-панелі для кожного продукту. Перший адаптер — Cursor SDK, другий — OpenCode, який працює з багатьма постачальниками моделей і з локальними моделями.
+Gilfo is not tied to one agent provider. All access to agents goes through the `AgentRuntime` interface, and a concrete runtime is an adapter chosen in the admin panel for each product. The first adapter is the Cursor SDK; the second is OpenCode, which works with many model providers and with local models.
 
-Контракт, який реалізує кожен адаптер:
+The contract each adapter implements:
 
 ```typescript
 interface AgentRuntime {
   id: string;                                   // 'cursor' | 'opencode' | ...
-  capabilities(): RuntimeCapabilities;          // що адаптер уміє нативно
+  capabilities(): RuntimeCapabilities;          // what the adapter supports natively
   start(task: AgentTask): Promise<AgentRun>;
   resume(runId: string, message: string): Promise<AgentRun>;
   cancel(runId: string): Promise<void>;
@@ -310,135 +310,134 @@ interface AgentRuntime {
 }
 
 interface AgentTask {
-  role: RoleConfig;           // промпт, політика інструментів, модель — з playbook
-  workdir: string;            // git worktree задачі
+  role: RoleConfig;           // prompt, tool policy, model — from the playbook
+  workdir: string;            // the task's git worktree
   prompt: string;
-  tools: McpServerRef[];      // інструменти Gilfo як MCP-сервер
-  outputSchema?: JSONSchema;  // картка інциденту, план фіксу
+  tools: McpServerRef[];      // Gilfo tools as an MCP server
+  outputSchema?: JSONSchema;  // incident card, fix plan
   limits: { timeoutSec: number; maxCostUsd: number };
 }
 
 interface AgentRun {
   id: string;
   events(): AsyncIterable<AgentEvent>;  // text | tool_call | tool_result | status | usage | error
-  result(): Promise<AgentResult>;       // підсумок, змінені файли, структурований вивід, витрати
+  result(): Promise<AgentResult>;       // summary, changed files, structured output, cost
 }
 ```
 
-Три правила тримають абстракцію чесною:
+Three rules keep the abstraction honest:
 
-1. **Політика описується один раз мовою Gilfo.** Роль у playbook задає дозволені інструменти, права й модель; адаптер перекладає це в рідний формат рантайму.
-2. **Чого рантайм не вміє, те робить Gilfo.** Ізоляцію, перевірку структурованого виводу й облік витрат Gilfo не перекладає на рантайм, якщо той не дає їх нативно.
-3. **Інструменти Gilfo оформлені як MCP-сервер.** Запит дії з runbook, читання агрегатів логів, робота з Linear доступні будь-якому рантайму, що підтримує MCP, без окремого коду під кожен.
+1. **Policy is described once, in Gilfo's terms.** A role in the playbook sets the allowed tools, permissions, and model; the adapter translates this into the runtime's native format.
+2. **What the runtime cannot do, Gilfo does.** Gilfo does not hand isolation, structured output validation, and cost accounting to the runtime unless the runtime provides them natively.
+3. **Gilfo tools are packaged as an MCP server.** Requesting a runbook action, reading log aggregates, and working with Linear are available to any runtime that supports MCP, with no separate code for each.
 
-| Можливість | Cursor SDK | OpenCode | Що робить Gilfo |
+| Capability | Cursor SDK | OpenCode | What Gilfo does |
 | --- | --- | --- | --- |
-| Моделі | Каталог моделей Cursor, лише ключ Cursor | Формат `провайдер/модель`, 75+ постачальників і локальні моделі | Модель для ролі задається в адмін-панелі, адаптер перекладає назву |
-| Ключі | Один ключ Cursor API | Ключі постачальників у конфігурації OpenCode або через `auth.set` | Тримає їх у сховищі секретів і передає адаптеру, не агенту |
-| Запуск | `Agent.create`, `agent.send` | `createOpencode` піднімає локальний сервер, далі `session.prompt` | Адаптер ховає різницю за `start` і `resume` |
-| Потік подій | `run.stream()` | `event.subscribe()` (SSE) | Нормалізує все в `AgentEvent` |
-| Права на інструменти | `tools`, `disallowedTools`, файлові хуки | `permission`: allow, ask, deny, з правилами для окремих команд і агентів | Одна політика ролі, перекладена адаптером |
-| Ізоляція | `sandboxOptions` (bubblewrap на Linux) | Окремої пісочниці ОС у документації не знайшов | Для OpenCode запускає процес у власній ізоляції (bubblewrap або контейнер) |
-| Власні інструменти | `customTools`, MCP | MCP | Один MCP-сервер інструментів Gilfo |
-| Структурований вивід | У документації не знайшов | Є | Сам перевіряє JSON Schema і повторює запит при помилці |
-| Облік витрат | Події `usage` | Не перевіряв | Власний облік; де рантайм не віддає ціну, рахує за токенами й прайсом |
+| Models | Cursor model catalog, Cursor key only | `provider/model` format, 75+ providers and local models | The model for a role is set in the admin panel; the adapter translates the name |
+| Keys | One Cursor API key | Provider keys in the OpenCode config or through `auth.set` | Keeps them in the secret store and passes them to the adapter, not to the agent |
+| Launch | `Agent.create`, `agent.send` | `createOpencode` starts a local server, then `session.prompt` | The adapter hides the difference behind `start` and `resume` |
+| Event stream | `run.stream()` | `event.subscribe()` (SSE) | Normalizes everything into `AgentEvent` |
+| Tool permissions | `tools`, `disallowedTools`, file hooks | `permission`: allow, ask, deny, with rules for individual commands and agents | One role policy, translated by the adapter |
+| Isolation | `sandboxOptions` (bubblewrap on Linux) | No separate OS sandbox found in the docs | For OpenCode, runs the process in its own isolation (bubblewrap or a container) |
+| Custom tools | `customTools`, MCP | MCP | One MCP server with Gilfo tools |
+| Structured output | Not found in the docs | Yes | Validates JSON Schema itself and retries the request on failure |
+| Cost accounting | `usage` events | Not checked | Own accounting; where the runtime does not report a price, computes it from tokens and the price list |
 
-Адаптер вважається готовим лише тоді, коли проходить спільний набір контрактних тестів: прочитати код і відповісти, внести фікс і пройти тест у worktree, не вийти за межі worktree, коректно скасуватися, повернути структурований вивід. Той самий набір запускається для кожного нового рантайму.
+An adapter counts as ready only when it passes the shared set of contract tests: read the code and answer, make a fix and pass a test in the worktree, not leave the worktree, cancel correctly, return structured output. The same set runs for each new runtime.
 
-Моделі призначаються ролям у конфігурації: дешева швидка модель для Log Analyst і діалогу, сильніша для Developer і Architect. Список доступних моделей адаптер бере з рантайму (`listModels`), бо він залежить від акаунта й постачальника.
+Models are assigned to roles in configuration: a cheap fast model for the Log Analyst and the dialog, a stronger one for the Developer and the Architect. The adapter takes the list of available models from the runtime (`listModels`), because it depends on the account and the provider.
 
-Оцінки вартості в цій специфікації немає: вона залежить від рантайму, моделей і обсягу логів. Її вимірює етап 0 на реальному проєкті.
+This specification has no cost estimate: it depends on the runtime, the models, and the log volume. Stage 0 measures it on a real project.
 
-## 11. Модель даних і стек
+## 11. Data model and stack
 
-Увесь довготривалий стан живе в Core; AI Admin тримає лише локальний буфер на випадок втрати зв'язку.
+All long-lived state lives in Core; AI Admin keeps only a local buffer in case the connection drops.
 
-| Сутність | Ключові поля |
+| Entity | Key fields |
 | --- | --- |
-| Project | назва, репозиторій GitLab, команда Linear, стан (`active`, `dev_paused`, `paused`, `archived`), ліміти витрат, версія playbook |
-| Server | адреса, токен AI Admin, останній heartbeat, версія Admin |
-| Service | проєкт, сервер, тип (docker, systemd, pm2), джерело логів, health-check |
-| LogWindow | сервіс, початок і кінець вікна, лічильники за рівнями, чи викликалась модель |
-| ErrorFingerprint | відбиток, перша й остання поява, кількість, статус (новий, відомий, приглушений) |
-| Incident | сервіс, відбитки, серйозність, статус, причина, задача Linear, MR |
-| FixProposal | інцидент, план, файли, ризик, впевненість |
-| Approval | що підтверджується, рішення, час, термін дії |
-| AgentRun | роль, проєкт, задача, модель, статус, тривалість, витрати, посилання на лог запуску |
-| Action | дія з runbook, параметри, підтвердження, результат перевірки |
-| MergeRequest | проєкт, гілка, посилання, статус CI, статус рев'ю |
-| ProjectSnapshot | знімок стану під час паузи: зроблено, в роботі, наступний крок |
-| Conversation | проєкт, повідомлення, ідентифікатор агента для продовження |
-| AuditEvent | хто, що, коли, над чим, результат |
+| Project | name, GitLab repository, Linear team, state (`active`, `dev_paused`, `paused`, `archived`), spending limits, playbook version |
+| Server | address, AI Admin token, last heartbeat, Admin version |
+| Service | project, server, type (docker, systemd, pm2), log source, health check |
+| LogWindow | service, window start and end, counters by level, whether the model was called |
+| ErrorFingerprint | fingerprint, first and last occurrence, count, status (new, known, muted) |
+| Incident | service, fingerprints, severity, status, cause, Linear task, MR |
+| FixProposal | incident, plan, files, risk, confidence |
+| Approval | what is being confirmed, decision, time, expiry |
+| AgentRun | role, project, task, model, status, duration, cost, link to the run log |
+| Action | runbook action, parameters, confirmation, post-check result |
+| MergeRequest | project, branch, link, CI status, review status |
+| ProjectSnapshot | state snapshot during a pause: done, in progress, next step |
+| Conversation | project, messages, agent identifier for resuming |
+| AuditEvent | who, what, when, on what, result |
 
-Стек:
+Stack:
 
-- Мова: TypeScript у всіх частинах, Node.js 22.13+ (вимога SDK). Монорепозиторій: `core`, `admin`, `protocol`, `playbook`.
-- Core: NestJS, PostgreSQL, черга задач і розклад на pg-boss (без окремого Redis), grammY для Telegram.
-- Розпізнавання мовлення: зовнішній STT-сервіс або локальний Whisper; вибір у відкритих питаннях.
-- AI Server Node: Node.js-демон під systemd, адаптери рантайму (`@cursor/sdk`, `@opencode-ai/sdk`), MCP-сервер інструментів Gilfo, SQLite для буфера, клієнт WebSocket.
-- Інфраструктурний код: Ansible, Docker Compose, GitLab CI.
-- Встановлення Admin: один скрипт із одноразовим токеном реєстрації, який видає Core командою в Telegram.
+- Language: TypeScript in all parts, Node.js 22.13+ (an SDK requirement). Monorepo: `core`, `admin`, `protocol`, `playbook`.
+- Core: NestJS, PostgreSQL, task queue and scheduling on pg-boss (no separate Redis), grammY for Telegram.
+- Speech recognition: an external STT service or local Whisper; the choice is in the open questions.
+- AI Server Node: a Node.js daemon under systemd, runtime adapters (`@cursor/sdk`, `@opencode-ai/sdk`), an MCP server with Gilfo tools, SQLite for the buffer, a WebSocket client.
+- Infrastructure code: Ansible, Docker Compose, GitLab CI.
+- Admin installation: one script with a one-time registration token that Core issues by a command in Telegram.
 
-## 12. Етапи реалізації
+## 12. Implementation stages
 
-Кожен етап дає корисний результат сам по собі. Порядок іде від найменшого ризику до найбільшого: спершу читання, потім код, потім дії на сервері.
+Each stage gives a useful result on its own. The order goes from the smallest risk to the largest: read first, then code, then server actions.
 
-| Етап | Що робимо | Критерій приймання |
+| Stage | What we do | Acceptance criterion |
 | --- | --- | --- |
-| 0. Перевірка SDK | Інтерфейс AgentRuntime, контрактні тести й адаптер Cursor SDK; локальний агент на сервері над робочою копією: sandbox, хуки, обмеження інструментів, скасування, облік витрат | Агент відповідає на питання про код; спроба запису поза worktree блокується; відома ціна одного аналізу логів і одного фіксу |
-| 1. Каркас | AI Server, Telegram-бот, адмін-панель, Node toolkit, протокол, `/status`, розмова про проєкт | Питання текстом і голосом отримують відповідь із даних сервера й репозиторію; відключення Admin дає сповіщення |
-| 2. Моніторинг | Збір логів, префільтр, 15-хвилинний цикл, інциденти з пропозицією фіксу, щоденний звіт | Штучно викликана помилка приходить у Telegram не пізніше ніж через 20 хвилин, один раз, з причиною в коді; цикл без помилок не викликає модель |
-| 3. Фікс і MR | Реалізація фіксу після «добро», Reviewer, MR у GitLab, задача в Linear, доопрацювання за коментарями, другий адаптер рантайму (OpenCode) | Від кнопки «Фіксити» до посилання на MR із зеленим CI без ручних кроків; push в основну гілку неможливий; той самий сценарій проходить на адаптері OpenCode |
-| 4. Дії на сервері та пауза | Runbook, Action Executor, підтвердження, стани проєкту, `/pause`, `/resume`, `/stop` | Рестарт і відкат виконуються лише після кнопки; пауза зупиняє витрати, відновлення продовжує зі знімка |
-| 5. PO-агент | Беклог у Linear, затвердження, розробка задач до MR, тижневе зведення | Затверджена задача доходить до MR без участі власника; незатверджені задачі в роботу не йдуть |
-| 6. Playbook і повний SDLC | Збір playbook з наявних репозиторіїв, Architect, шаблони, налаштування сервера через Ansible, `/new` | Новий проєкт проходить шлях від опису ідеї до розгорнутого каркаса на чистому сервері лише через підтвердження в Telegram |
-| 7. Розширення | Кілька серверів і проєктів, мобільний застосунок, голосові відповіді | Другий сервер підключається однією командою без змін у Core |
+| 0. SDK check | AgentRuntime interface, contract tests, and the Cursor SDK adapter; a local agent on the server over a working copy: sandbox, hooks, tool limits, cancellation, cost accounting | The agent answers a question about the code; an attempt to write outside the worktree is blocked; the price of one log analysis and one fix is known |
+| 1. Skeleton | AI Server, Telegram bot, admin panel, Node toolkit, protocol, `/status`, conversation about the project | Questions by text and voice get an answer from server and repository data; disconnecting the Admin triggers a notification |
+| 2. Monitoring | Log collection, pre-filter, 15-minute cycle, incidents with a proposed fix, daily report | An error raised on purpose arrives in Telegram within 20 minutes, once, with a cause in the code; a cycle without errors does not call a model |
+| 3. Fix and MR | Implementing the fix after a go-ahead, Reviewer, GitLab MR, Linear task, follow-up on comments, the second runtime adapter (OpenCode) | From the "Fix" button to a MR link with green CI with no manual steps; a push to the default branch is impossible; the same scenario passes on the OpenCode adapter |
+| 4. Server actions and pause | Runbook, Action Executor, confirmations, project states, `/pause`, `/resume`, `/stop` | Restart and rollback run only after a button press; a pause stops spending; resume continues from the snapshot |
+| 5. PO agent | Backlog in Linear, approval, developing tasks through to a MR, weekly summary | An approved task reaches a MR without the owner; unapproved tasks do not go into work |
+| 6. Playbook and full SDLC | Building the playbook from existing repositories, Architect, templates, server setup through Ansible, `/new` | A new project goes from an idea description to a deployed skeleton on a clean server only through confirmations in Telegram |
+| 7. Expansion | Several servers and projects, mobile app, voice replies | A second server connects with one command with no changes to Core |
 
-Етап 6 стоїть після експлуатаційних навмисно: налаштування сервера найризикованіше, і до нього мають уже працювати підтвердження, аудит і runbook. Пілот етапів 0–5 йде на наявному проєкті й сервері.
+Stage 6 comes after the operational stages on purpose: server setup is the riskiest, and confirmations, audit, and the runbook must already work before it. The pilot of stages 0–5 runs on an existing project and server.
 
-## 13. Ризики, відкриті питання, ідеї
+## 13. Risks, open questions, ideas
 
-### Ризики
+### Risks
 
-| Ризик | Як знижуємо |
+| Risk | How we reduce it |
 | --- | --- |
-| Агенти з правом запису працюють на продовому сервері: збірка й тести забирають ресурси, помилка ізоляції зачіпає прод | Ізоляція з розділу 9 і ліміти ресурсів. Рекомендація: щойно з'явиться другий сервер, винести Developer на окрему машину або в хмарний режим SDK, залишивши на проді лише читання |
-| Рантайм агентів змінює API або ціни (Cursor SDK ще в публічній беті) | Єдиний інтерфейс `AgentRuntime`, два адаптери (Cursor SDK, OpenCode), спільні контрактні тести, перемикання рантайму в адмін-панелі |
-| Вартість 96 циклів на добу | Префільтр без моделі, відбитки, ліміти витрат, вимірювання на етапі 0 |
-| Логи йдуть у зовнішню модель | Маскування до відправки, Privacy Mode, передача лише відібраних записів |
-| Текст у логах містить інструкції для моделі (prompt injection) | Log Analyst без прав запису; Developer отримує структуровану картку інциденту; кожна зміна проходить підтвердження і рев'ю MR |
-| Фікс лікує симптом або ламає інше | Обов'язковий тест на помилку, Reviewer, CI, рев'ю власника, спостереження 24 години після деплою |
-| Потік сповіщень, які власник перестане читати | Рівні серйозності, тихі години, приглушення відбитків, один інцидент на одну причину |
+| Agents with write access run on the production server: builds and tests take resources, an isolation failure affects production | Isolation from section 9 and resource limits. Recommendation: as soon as a second server appears, move the Developer to a separate machine or to the SDK cloud mode, leaving only read access on production |
+| The agent runtime changes its API or prices (Cursor SDK is still in public beta) | One `AgentRuntime` interface, two adapters (Cursor SDK, OpenCode), shared contract tests, switching the runtime in the admin panel |
+| Cost of 96 cycles a day | Pre-filter without a model, fingerprints, spending limits, measurement in stage 0 |
+| Logs go to an external model | Masking before sending, Privacy Mode, sending only the selected entries |
+| Log text contains instructions for the model (prompt injection) | Log Analyst has no write access; the Developer gets a structured incident card; every change goes through confirmation and MR review |
+| A fix treats the symptom or breaks something else | A mandatory test for the error, Reviewer, CI, owner review, 24 hours of watching after deploy |
+| A stream of notifications the owner stops reading | Severity levels, quiet hours, muting fingerprints, one incident per cause |
 
-### Відкриті питання
+### Open questions
 
-- [ ] Який стек пілотного проєкту і чи є в ньому тести та GitLab CI?
-- [ ] GitLab хмарний чи власний? Як зараз відбувається деплой на прод?
-- [ ] Формат логів сервісів: JSON чи довільний текст? Чи є вже Sentry або інший моніторинг?
-- [ ] Який тариф Cursor і чий ключ використовуємо: особистий чи сервісного акаунта команди?
-- [ ] Місячний ліміт витрат на агентів?
-- [ ] Розпізнавання мовлення: зовнішній сервіс чи локальний Whisper?
-- [ ] Де розміщуємо Core?
-- [ ] Час щоденного звіту й тихі години?
-- [ ] Що саме входить у «мій стиль»: які репозиторії взяти за еталон для playbook?
-- [ ] Чи є staging-середовище, чи фікси після merge йдуть одразу на прод?
+- [ ] What is the pilot project's stack, and does it have tests and GitLab CI?
+- [ ] Is GitLab cloud or self-hosted? How is production deployed today?
+- [ ] Service log format: JSON or free text? Is there Sentry or other monitoring already?
+- [ ] Which Cursor plan, and whose key do we use: personal or a team service account?
+- [ ] Monthly spending limit for agents?
+- [ ] Speech recognition: external service or local Whisper?
+- [ ] Where do we host Core?
+- [ ] Time of the daily report and quiet hours?
+- [ ] What exactly is "my style": which repositories to take as the reference for the playbook?
+- [ ] Is there a staging environment, or do fixes go straight to production after merge?
 
-### Ідеї на потім
+### Ideas for later
 
-- Пам'ять інцидентів: база минулих причин і фіксів, яку Developer читає перед аналізом.
-- Зовнішні перевірки доступності з Core: сервіс, що впав мовчки, логів не пише.
-- Агент безпеки: вразливі залежності, секрети в коді, прострочені сертифікати.
-- Рев'ю MR, які власник пише сам.
-- Нотатки до релізів і changelog із замерджених MR.
-- Голосовий діалог у реальному часі в мобільному застосунку.
-- Веб-панель із історією інцидентів, запусків агентів і витрат.
+- Incident memory: a base of past causes and fixes that the Developer reads before analysis.
+- External availability checks from Core: a service that died silently writes no logs.
+- A security agent: vulnerable dependencies, secrets in code, expired certificates.
+- Review of MRs the owner writes themselves.
+- Release notes and a changelog from merged MRs.
+- Real-time voice dialog in the mobile app.
+- A web panel with the history of incidents, agent runs, and spending.
 
-## Джерела
+## Sources
 
-- [Cursor TypeScript SDK, документація](https://cursor.com/docs/sdk/typescript.md): факти про Cursor SDK у розділі 10.
-- [OpenCode SDK](https://opencode.ai/docs/sdk): запуск сервера, сесії, потік подій.
-- [OpenCode, дозволи](https://opencode.ai/docs/permissions/): allow, ask, deny для інструментів і агентів.
-- [OpenHands alternatives: огляд OpenCode](https://www.testmuai.com/blog/openhands-alternatives/): 75+ постачальників моделей і локальні моделі.
+- [Cursor TypeScript SDK, documentation](https://cursor.com/docs/sdk/typescript.md): facts about the Cursor SDK in section 10.
+- [OpenCode SDK](https://opencode.ai/docs/sdk): starting the server, sessions, event stream.
+- [OpenCode, permissions](https://opencode.ai/docs/permissions/): allow, ask, deny for tools and agents.
+- [OpenHands alternatives: OpenCode overview](https://www.testmuai.com/blog/openhands-alternatives/): 75+ model providers and local models.
 
-Станом на 18 листопада 2026 року.
-ЁЁ
+As of November 18, 2026.

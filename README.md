@@ -53,7 +53,3 @@ Contributions are welcome now, while the repository is still at stage 0. Review 
 ## Acknowledgements
 
 People who contribute are listed here.
-
-## Українською
-
-Gilfo — AI-колега для маленької команди: можна паралельно вести 20–30 проєктів і говорити з ним у Telegram текстом або голосом, відійшовши від комп'ютера. Зараз етап 0, старт з одного сервера й одного проєкту, коду застосунку ще немає. Специфікація: [docs/SPEC.md](docs/SPEC.md).
